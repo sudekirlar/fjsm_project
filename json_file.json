@@ -34,6 +34,43 @@
           "eligible_machines": ["A", "D", "E"]
         }
       ]
+    },
+    {
+      "job_id": 103,
+      "tasks": [
+        {
+          "name": "kesme",
+          "type": "split",
+          "count": 3,
+          "order": 1,
+          "eligible_machines": ["A", "B", "C", "D", "E", "F"]
+        },
+        {
+          "name": "oyma",
+          "type": "split",
+          "count": 2,
+          "order": 2,
+          "eligible_machines": ["A", "B", "C", "D", "E", "F"]
+        }
+      ]
+    },
+    {
+      "job_id": 104,
+      "tasks": [
+        {
+          "name": "kesme",
+          "type": "single",
+          "order": 1,
+          "eligible_machines": ["A", "B", "C", "D", "E", "F"]
+        },
+        {
+          "name": "oyma",
+          "type": "split",
+          "count": 4,
+          "order": 2,
+          "eligible_machines": ["A", "B", "C", "D", "E", "F"]
+        }
+      ]
     }
   ]
 }
