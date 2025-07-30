@@ -1,0 +1,24 @@
+# Python cache'ler takipten çıkarıldı.
+__pycache__/
+*.py[cod]
+
+# Sanal ortam klasörleri çıkarıldı.
+.venv/
+env/
+*.env
+
+# Build klasörleri çıkarıldı.
+build/
+dist/
+*.egg-info/
+
+# IDE klasörlerinin çıkarılması için konuldu.
+.idea/
+.vscode/
+
+# OS dosyaları için konuldu.
+.DS_Store
+Thumbs.db
+
+
+# Burada işlem yaparken git status ile track'lenen dosyalar takip edilebilir. git add zaten warning oluşturuyor ayrıca.
