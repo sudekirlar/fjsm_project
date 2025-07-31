@@ -20,5 +20,12 @@ dist/
 .DS_Store
 Thumbs.db
 
+# Gantt chart track'lenmesin diye eklendi.
 .png
+
+# log dosyası track'lenmesin diye eklendi.
+/logs
+.log
+
+
 # Burada işlem yaparken git status ile track'lenen dosyalar takip edilebilir. git add zaten warning oluşturuyor ayrıca.
