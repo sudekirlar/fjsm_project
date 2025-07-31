@@ -21,7 +21,7 @@ dist/
 Thumbs.db
 
 # Gantt chart track'lenmesin diye eklendi.
-.png
+*.png
 
 # log dosyası track'lenmesin diye eklendi.
 /logs
