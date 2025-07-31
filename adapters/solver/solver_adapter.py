@@ -1,7 +1,7 @@
 from ortools.sat.python import cp_model
 from core.models.data_model import TaskInstanceDTO, PlanResultDTO
 from project_config.machine_config_loader import MachineConfig
-from collections import defaultdict
+from collections import defaultdict, Counter
 
 
 class ORToolsSolver:
@@ -18,10 +18,16 @@ class ORToolsSolver:
         machine_assignments = {}
         machine_to_tasks = {}
 
-        # === 1. Görev başlatma, bitiş, atama değişkenleri ===
+        print("🔧 Görev–Makine eşleşmeleri ve süreler:")
         for task in tasks:
+            print(f"📌 Görev: {task.name} ({task.id})")
             for machine in task.machine_candidates:
                 duration = self.config.get_duration(task.base_name, machine)
+                if duration is None:
+                    print(f"   🚫 {machine} için süre bulunamadı!")
+                    continue
+
+                print(f"   ✅ {machine} → {duration} birim süre")
                 suffix = f"_{task.id}_{machine}"
                 start = model.new_int_var(0, horizon, f"start{suffix}")
                 end = model.new_int_var(0, horizon, f"end{suffix}")
@@ -37,14 +43,11 @@ class ORToolsSolver:
 
                 machine_to_tasks.setdefault(machine, []).append(interval)
 
-            # Her görev yalnızca 1 makineye atanmalı
             model.add(sum(machine_assignments[task.id, m] for m in task.machine_candidates) == 1)
 
-        # === 2. Aynı makineye gelen işler çakışmasın ===
         for machine, intervals in machine_to_tasks.items():
             model.add_no_overlap(intervals)
 
-        # === 3. Job faz sıralaması (tüm görevler sıralı fazlara uysun) ===
         job_order_map = defaultdict(lambda: defaultdict(list))
         for task in tasks:
             job_order_map[task.job_id][task.order].append(task)
@@ -55,7 +58,6 @@ class ORToolsSolver:
                 current_tasks = order_map[orders[i]]
                 next_tasks = order_map[orders[i + 1]]
 
-                # Faz geçişinde her t1 → t2 bağımlılığı tanımla (opsiyonel ama granular)
                 for t1 in current_tasks:
                     for t2 in next_tasks:
                         for m1 in t1.machine_candidates:
@@ -68,7 +70,6 @@ class ORToolsSolver:
                                     machine_assignments[t2.id, m2]
                                 )
 
-                # Faz geçişini grup olarak da sabitle (faz tamamı bitmeden yeni faz başlamasın)
                 current_ends = [
                     end_vars[t.id, m]
                     for t in current_tasks
@@ -88,19 +89,24 @@ class ORToolsSolver:
 
                 model.add(phase_end <= phase_start)
 
-        # === 4. Makespan hedefi ===
         all_ends = [end_vars[task.id, m] for task in tasks for m in task.machine_candidates]
         makespan = model.new_int_var(0, horizon, "makespan")
         model.add_max_equality(makespan, all_ends)
         model.minimize(makespan)
 
-        # === 5. Çöz ===
+        print("\n🚀 Çözüm başlatılıyor...")
         solver = cp_model.CpSolver()
         status = solver.solve(model)
 
         results = []
 
+        print(f"\n📊 Çözüm Durumu: {solver.StatusName(status)}")
+        print(f"⏱️  Wall time: {solver.WallTime():.3f} saniye")
+
         if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
+            assignment_counter = Counter()
+            assigned_task_ids = set()
+
             for task in tasks:
                 for machine in task.machine_candidates:
                     if solver.boolean_value(machine_assignments[task.id, machine]):
@@ -114,7 +120,21 @@ class ORToolsSolver:
                             start_time=start,
                             end_time=end
                         ))
+                        print(f"   ✅ {task.name} ({task.job_id}) → {machine} | {start} → {end}")
+                        assignment_counter[machine] += 1
+                        assigned_task_ids.add(task.id)
                         break
+
+            unassigned_ids = {t.id for t in tasks} - assigned_task_ids
+            if unassigned_ids:
+                print(f"\n⚠️  {len(unassigned_ids)} görev atanamadı: {sorted(unassigned_ids)}")
+
+            print("\n🧮 Makineye göre görev sayısı:")
+            for machine, count in assignment_counter.items():
+                print(f"   • {machine}: {count} görev")
+
+            print(f"\n📦 Toplam görev: {len(tasks)} / Atanan: {len(results)}")
+
         else:
             raise RuntimeError("No feasible solution found.")
 

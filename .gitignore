@@ -20,5 +20,5 @@ dist/
 .DS_Store
 Thumbs.db
 
-
+.png
 # Burada işlem yaparken git status ile track'lenen dosyalar takip edilebilir. git add zaten warning oluşturuyor ayrıca.

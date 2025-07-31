@@ -7,14 +7,14 @@
           "name": "kesme",
           "type": "single",
           "order": 1,
-          "eligible_machines": ["A", "B", "C", "D", "E", "F"]
+          "eligible_machines": ["K#1", "K#2", "K#3", "K#4", "K#5", "K#6"]
         },
         {
           "name": "oyma",
           "type": "split",
           "count": 2,
           "order": 2,
-          "eligible_machines": ["A", "B", "C", "D", "E", "F"]
+          "eligible_machines": ["O#1", "O#2", "O#3", "O#4", "O#5", "O#6"]
         }
       ]
     },
@@ -25,13 +25,13 @@
           "name": "kesme",
           "type": "single",
           "order": 1,
-          "eligible_machines": ["A", "B", "C"]
+          "eligible_machines": ["K#1", "K#2", "K#3"]
         },
         {
           "name": "oyma",
           "type": "single",
           "order": 2,
-          "eligible_machines": ["A", "D", "E"]
+          "eligible_machines": ["O#1", "O#2", "O#5"]
         }
       ]
     },
@@ -43,14 +43,14 @@
           "type": "split",
           "count": 3,
           "order": 1,
-          "eligible_machines": ["A", "B", "C", "D", "E", "F"]
+          "eligible_machines": ["K#1", "K#2", "K#3", "K#4", "K#5", "K#6"]
         },
         {
           "name": "oyma",
           "type": "split",
           "count": 2,
           "order": 2,
-          "eligible_machines": ["A", "B", "C", "D", "E", "F"]
+          "eligible_machines": ["O#1", "O#2", "O#3", "O#4", "O#5", "O#6"]
         }
       ]
     },
@@ -61,14 +61,14 @@
           "name": "kesme",
           "type": "single",
           "order": 1,
-          "eligible_machines": ["A", "B", "C", "D", "E", "F"]
+          "eligible_machines": ["K#1", "K#3", "K#5", "K#6"]
         },
         {
           "name": "oyma",
           "type": "split",
           "count": 4,
           "order": 2,
-          "eligible_machines": ["A", "B", "C", "D", "E", "F"]
+          "eligible_machines": ["O#1", "O#2", "O#3", "O#4", "O#5", "O#6"]
         }
       ]
     }
