@@ -25,7 +25,6 @@ Thumbs.db
 
 # log dosyası track'lenmesin diye eklendi.
 /logs
-.log
-
+*.log
 
 # Burada işlem yaparken git status ile track'lenen dosyalar takip edilebilir. git add zaten warning oluşturuyor ayrıca.

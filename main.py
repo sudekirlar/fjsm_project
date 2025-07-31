@@ -26,7 +26,7 @@ def main():
     machine_config = MachineConfig(machine_config_path)
 
     # Loglama nesnemizi yaratıyoruz. level sıralaması: CRITICAL > ERROR > WARNING > INFO > DEBUG > NOTSET. Eğer vermezsek default'ı INFO'dur.
-    logger = LoggerAdapter(level=logging.DEBUG, file_path="logs/fjsm.log")
+    logger : ILoggingPort = LoggerAdapter(level=logging.DEBUG, file_path="logs/fjsm.log")
 
     # Core nesnesi, FJSM port'unun sözleşmesine uyan bir nesnedir. Dependency injection ile dışarıdan makine listesi ve logger'ı veriyoruz.
     core: IFJSMCore = FJSMCore(machine_config, logger=logger)
