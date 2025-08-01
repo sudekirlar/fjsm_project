@@ -90,22 +90,7 @@ class ORToolsSolver:
                 current_tasks = order_map[orders[i]]
                 next_tasks = order_map[orders[i + 1]]
 
-                # Her t1, t2 ilişkisi için eğer t1, m1'e atanmışsa ve t2, m2'ye atanmışsa t1 bitmeden t2 başlamasın.
-                for t1 in current_tasks:
-                    for t2 in next_tasks:
-                        for m1 in t1.machine_candidates:
-                            for m2 in t2.machine_candidates:
-                                # only_enforce_if(...) conditional contraint (şartlı kısıt).
-                                # Eğer biz bir şeyin bir koşulda ona atanmasını destekliyorsak,
-                                # ama atanmadığı noktada sıkıntı yoksa enforce etmeye gerek yok diyoruz.
-                                # Bu yapı, model'i yavaşlatırsa ve zorlarsa add_max'lar yeterli olacaktır.
-                                model.add(
-                                    end_vars[t1.id, m1] <= start_vars[t2.id, m2]
-                                ).only_enforce_if(
-                                    machine_assignments[t1.id, m1]
-                                ).only_enforce_if(
-                                    machine_assignments[t2.id, m2]
-                                )
+                # only_enforce_if() yapıları kaldırıldı.
 
                 current_ends = [
                     end_vars[t.id, m]
@@ -126,9 +111,21 @@ class ORToolsSolver:
 
                 model.add(phase_end <= phase_start)
 
-        all_ends = [end_vars[task.id, m] for task in tasks for m in task.machine_candidates]
+        # Son order'a ait görevlerdeki bitişlerden en büyüğünü end olarak seçiyoruz. Bunun için liste tutuyoruz.
+        job_final_ends = []
+        for job_id, order_map in job_order_map.items():
+            if not order_map:
+                continue
+            # keys() dersen sadece key, items() dersen key ve value çifti, value() dersen sadece value verir. Bunlar dict'e ait şeyler.
+            last_order = max(order_map.keys())
+            last_tasks = order_map[last_order]
+            job_end_var = model.new_int_var(0, horizon, f"job_end_{job_id}")
+            ends = [end_vars[t.id, m] for t in last_tasks for m in t.machine_candidates]
+            model.add_max_equality(job_end_var, ends)
+            job_final_ends.append(job_end_var)
+
         makespan = model.new_int_var(0, horizon, "makespan")
-        model.add_max_equality(makespan, all_ends)
+        model.add_max_equality(makespan, job_final_ends)
         model.minimize(makespan)
 
         self.logger.info("Solver starting...")
