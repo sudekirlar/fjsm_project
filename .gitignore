@@ -27,4 +27,5 @@ Thumbs.db
 /logs
 *.log
 
+project_config/settings.py
 # Burada işlem yaparken git status ile track'lenen dosyalar takip edilebilir. git add zaten warning oluşturuyor ayrıca.
