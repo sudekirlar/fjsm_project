@@ -2,6 +2,7 @@
 
 import logging
 from adapters.driving.json_data_reader_adapter import JsonDataReaderAdapter
+from adapters.driving.postgresql_data_reader_adapter import PostgreSQLDataReaderAdapter
 from adapters.logging.logger_adapter import LoggerAdapter
 from core.ports.fjsm_port import IFJSMCore
 from core.ports.logging_port import ILoggingPort
@@ -18,9 +19,11 @@ def main():
     gantt_output_path = "gantt_chart.png"
 
     # JSON okuma işini yapacak nesneyi yaratıyoruz. Ona hangi dosyayı okuyacağını söylüyoruz.
-    data_reader = JsonDataReaderAdapter(job_data_path)
+    # data_reader = JsonDataReaderAdapter(job_data_path)
+    reader = PostgreSQLDataReaderAdapter()
     # Sonrasında dosyanın okunmasını ve içindeki veriyi bizim istediğim DTO şekline çevirmesini sağlıyoruz.
-    packages = data_reader.read_packages()
+    # packages = data_reader.read_packages()
+    packages = reader.read_packages()
 
     # Makine ve süreleri içeren dosyayı okuyacak nesneyi yaratıp dosyasını veriyoruz.
     machine_config = MachineConfig(machine_config_path)
