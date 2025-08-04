@@ -20,7 +20,7 @@ def main():
     # JSON okuma işini yapacak nesneyi yaratıyoruz. Ona hangi dosyayı okuyacağını söylüyoruz.
     data_reader = JsonDataReaderAdapter(job_data_path)
     # Sonrasında dosyanın okunmasını ve içindeki veriyi bizim istediğim DTO şekline çevirmesini sağlıyoruz.
-    jobs = data_reader.read_jobs()
+    packages = data_reader.read_packages()
 
     # Makine ve süreleri içeren dosyayı okuyacak nesneyi yaratıp dosyasını veriyoruz.
     machine_config = MachineConfig(machine_config_path)
@@ -31,7 +31,7 @@ def main():
     # Core nesnesi, FJSM port'unun sözleşmesine uyan bir nesnedir. Dependency injection ile dışarıdan makine listesi ve logger'ı veriyoruz.
     core: IFJSMCore = FJSMCore(machine_config, logger=logger)
     # Core'un task işlerini yapacak metodunu çağırıyoruz.
-    task_instances = core.process_jobs(jobs)
+    task_instances = core.process_packages(packages)
 
     # Solver'ı da dependency injection ile başlatıyoruz.
     solver = ORToolsSolver(machine_config, logger=logger)

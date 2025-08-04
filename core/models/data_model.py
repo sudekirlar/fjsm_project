@@ -18,6 +18,12 @@ class JobDTO:
     job_id: int
     tasks: List[TaskDTO]
 
+@dataclass
+class PackageDTO:
+    package_id: int
+    deadline: str
+    jobs: List[JobDTO]
+
 # Instance'lar split görevler içindir. Eğer bir split görev'den örneğin 5 tane varsa, 5 adet task instance'ı oluşacaktır.
 @dataclass
 class TaskInstanceDTO:
@@ -27,6 +33,7 @@ class TaskInstanceDTO:
     name: str  # iş + suffix hali gibi düşünüyoruz.
     machine_candidates: List[str]  # Bir görevin atanabileceği tam, kuralları kontrol edilmiş liste.
     base_name: Optional[str] = None  # Orijinal görevin ismini tutuyoruz. (suffix eklemek için)
+    package_id: Optional[int] = None
 
 # Solver'ın sonucunu döndürüyoruz. Bunu tutan listemiz.
 @dataclass

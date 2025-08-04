@@ -9,7 +9,7 @@ class IFJSMCore(ABC):
     Görevlerin iş kurallarına göre işlenmesini sağlayan core'un sözleşmesidir.
     """
     @abstractmethod
-    def process_jobs(self, jobs: List[JobDTO]) -> List[TaskInstanceDTO]:
+    def process_packages(self, jobs: List[JobDTO]) -> List[TaskInstanceDTO]:
         """
         Core içinde iş kurallarını kontrol eder, kısıtları düzenler ve tüm iş ve görevleri listeye kaydeder.
         """
