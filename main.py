@@ -1,6 +1,8 @@
 # main.py
 
 import logging
+
+from adapters.driven.plotly_gantt_adapter import render_interactive_gantt
 from adapters.driving.json_data_reader_adapter import JsonDataReaderAdapter
 from adapters.driving.postgresql_data_reader_adapter import PostgreSQLDataReaderAdapter
 from adapters.logging.logger_adapter import LoggerAdapter
@@ -42,9 +44,11 @@ def main():
     plan_results = solver.solve(task_instances)
 
     # Gantt grafiğinin çıkacağı nesneyi ve adapter'a gidecek yolu veriyoruz.
-    gantt = GanttChartRenderer(output_path=gantt_output_path, logger = logger)
+    # gantt = GanttChartRenderer(output_path=gantt_output_path, logger = logger)
     # Solver'dan gelen çözümü gantt çizmek için gönderiyoruz.
-    gantt.render(plan_results)
+    # gantt.render(plan_results)
+
+    render_interactive_gantt(plan_results, output_path="gantt_output.html")
 
     logger.info(f"Plan is done. Gantt chart: {gantt_output_path}")
 

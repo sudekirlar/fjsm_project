@@ -1,4 +1,5 @@
 # adapters/solver/solver_adapter.py
+import os
 
 from ortools.sat.python import cp_model
 from core.models.data_model import TaskInstanceDTO, PlanResultDTO
@@ -130,6 +131,11 @@ class ORToolsSolver:
 
         self.logger.info("Solver starting...")
         solver = cp_model.CpSolver()
+        self.logger.info("Solver detailed log starting...")
+        solver.parameters.max_time_in_seconds = 60.0
+        solver.parameters.log_search_progress = True
+        solver.parameters.log_to_stdout = True
+        #solver.parameters.num_search_workers = os.cpu_count() or 4
         status = solver.solve(model)
 
         results = []

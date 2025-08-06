@@ -61,6 +61,13 @@ class FJSMCore(IFJSMCore):
                         self.logger.error(f"Unknown task type '{task.type}' in job {job.job_id}")
                         raise ValueError(f"Unknown task type: {task.type}")
 
+        self.logger.debug(f"Toplam task instance sayısı: {len(all_task_instances)}")
+
+        # Eğer çok fazlaysa ilk 1000 instance ile sınırlıyoruz.
+        if len(all_task_instances) > 500:
+            self.logger.warning("Task instance sayısı 1000'i geçti. İlk 1000 ile sınırlandırılıyor.")
+            return all_task_instances[:1000]
+
         return all_task_instances
 
     def _create_task_instance(
