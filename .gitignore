@@ -28,4 +28,9 @@ Thumbs.db
 *.log
 
 project_config/settings.py
+
+.html
+
+gantt_chart.html
+gantt_output.html
 # Burada işlem yaparken git status ile track'lenen dosyalar takip edilebilir. git add zaten warning oluşturuyor ayrıca.
