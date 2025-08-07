@@ -40,11 +40,11 @@ class PostgreSQLDataReaderAdapter:
                         tasks: List[TaskDTO] = []
 
                         for task in task_rows:
-                            cur.execute(
-                                "SELECT machine_name FROM task_machine WHERE task_id = %s",
-                                (task["task_id"],)
-                            )
-                            machine_codes = [row["machine_name"] for row in cur.fetchall()]
+                            raw_machines = task["eligible_machines"]  # TEXT column
+                            if raw_machines:
+                                machine_codes = raw_machines.strip("[]").replace("'", "").replace('"', '').split(", ")
+                            else:
+                                machine_codes = []
 
                             task_dto = TaskDTO(
                                 name=task["name"],
