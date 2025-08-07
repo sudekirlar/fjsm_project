@@ -13,13 +13,9 @@ class ORToolsSolver:
         self.logger = logger
 
     def solve(self, tasks: list[TaskInstanceDTO]) -> list[PlanResultDTO]:
-        """
-        Task listesini parametre alarak (DTO) çıktı listesine döner.
-        """
         model = cp_model.CpModel()
-        # horizon = 10000 # sabit sayı yerine dinamik sayı verilmesi planlandı.
 
-        # Dinamik olarak horizon hesabı yapıyoruz.
+        # Horizon hesaplama
         max_duration_sum = 0
         for task in tasks:
             durations = [
@@ -30,9 +26,9 @@ class ORToolsSolver:
             if durations:
                 max_duration_sum += max(durations)
 
-        # Burada üst sınıra pay bıraktık çünkü bağımlı alt task'ler bulunuyor. (Güvenli sınır)
         horizon = int(max_duration_sum * 1.5)
 
+        # Değişken tanımlamaları
         start_vars = {}
         end_vars = {}
         interval_vars = {}
@@ -64,34 +60,22 @@ class ORToolsSolver:
 
                 machine_to_tasks.setdefault(machine, []).append(interval)
 
-            # model.add(sum(machine_assignments[task.id, m] for m in task.machine_candidates) == 1)
-            # Aşağıdaki satırda karar düğümlerinin olasılıkları belirlenir.
-            # Örneğin kesme task'inin makinelerden sadece ve sadece birine ama mutlaka birine yerleşmesi sağlanır.
-            # Yukarıdaki satır ile aynı işlevi görür.
             model.add_exactly_one([machine_assignments[task.id, m] for m in task.machine_candidates])
 
         for machine, intervals in machine_to_tasks.items():
             model.add_no_overlap(intervals)
 
-        # Tüm task'ler job id ve order'a göre gruplandırılır. İçerideki yapı şuna benziyor:
-        # (defaultdict yapısı eğer key varsa o değeri döner. Eğer yoksa default value döner. Burada boş liste dönüyoruz.)
-        # {
-        #     job_id_1:
-        #     order_1: [task0, task1],
-        #     order_2: [task3]}
-        # }
+        # Job–Order gruplama
         job_order_map = defaultdict(lambda: defaultdict(list))
         for task in tasks:
-            # Tüm görevler, ait oldukları job_id ve order'a göre gruplandırılır. Bir job'un aynı order içinde birden fazla görevi olabilir.
             job_order_map[task.job_id][task.order].append(task)
 
+        # Faz geçişleri (order precedence)
         for job_id, order_map in job_order_map.items():
             orders = sorted(order_map.keys())
             for i in range(len(orders) - 1):
                 current_tasks = order_map[orders[i]]
                 next_tasks = order_map[orders[i + 1]]
-
-                # only_enforce_if() yapıları kaldırıldı.
 
                 current_ends = [
                     end_vars[t.id, m]
@@ -107,17 +91,16 @@ class ORToolsSolver:
                 phase_end = model.new_int_var(0, horizon, f"phase{job_id}_{orders[i]}_end")
                 model.add_max_equality(phase_end, current_ends)
 
-                phase_start = model.new_int_var(0, horizon, f"phase{job_id}_{orders[i+1]}_start")
+                phase_start = model.new_int_var(0, horizon, f"phase{job_id}_{orders[i + 1]}_start")
                 model.add_min_equality(phase_start, next_starts)
 
                 model.add(phase_end <= phase_start)
 
-        # Son order'a ait görevlerdeki bitişlerden en büyüğünü end olarak seçiyoruz. Bunun için liste tutuyoruz.
+        # Job'ların bitiş zamanlarını hesapla
         job_final_ends = []
         for job_id, order_map in job_order_map.items():
             if not order_map:
                 continue
-            # keys() dersen sadece key, items() dersen key ve value çifti, value() dersen sadece value verir. Bunlar dict'e ait şeyler.
             last_order = max(order_map.keys())
             last_tasks = order_map[last_order]
             job_end_var = model.new_int_var(0, horizon, f"job_end_{job_id}")
@@ -125,21 +108,30 @@ class ORToolsSolver:
             model.add_max_equality(job_end_var, ends)
             job_final_ends.append(job_end_var)
 
+        # Makespan hesapla
         makespan = model.new_int_var(0, horizon, "makespan")
         model.add_max_equality(makespan, job_final_ends)
-        model.minimize(makespan)
 
+        # İkincil hedef: tüm job'ların toplam bitiş süresi
+        total_job_completion = model.new_int_var(0, horizon * len(job_final_ends), "total_job_completion")
+        model.add(total_job_completion == sum(job_final_ends))
+
+        # Hedefler: lexicographic minimize
+        model.minimize(makespan)
+        model.minimize(total_job_completion)
+
+        # Solver konfigürasyonu
         self.logger.info("Solver starting...")
         solver = cp_model.CpSolver()
         self.logger.info("Solver detailed log starting...")
         solver.parameters.max_time_in_seconds = 60.0
         solver.parameters.log_search_progress = True
         solver.parameters.log_to_stdout = True
-        #solver.parameters.num_search_workers = os.cpu_count() or 4
+        # solver.parameters.num_search_workers = os.cpu_count() or 4
+
         status = solver.solve(model)
 
         results = []
-
         self.logger.info(f"Solver Status: {solver.StatusName(status)}")
         self.logger.debug(f"Wall time: {solver.WallTime():.3f} s")
 
@@ -180,3 +172,4 @@ class ORToolsSolver:
             raise RuntimeError("No feasible solution found.")
 
         return results
+
