@@ -21,31 +21,34 @@ class ORToolsSolver:
             durations = [
                 self.config.get_duration(task.base_name, m)
                 for m in task.machine_candidates
-                if self.config.get_duration(task.base_name, m) > 0  # CHANGED: None yerine >0
+                if self.config.get_duration(task.base_name, m) > 0
             ]
             if durations:
                 max_duration_sum += max(durations)
 
+        # Güvenli bir üst aralık için x1.5
         horizon = int(max_duration_sum * 1.5)
 
         # Değişken tanımlamaları
-        start_vars = {}           # (task.id, machine) -> IntVar
-        end_vars = {}             # (task.id, machine) -> IntVar
-        interval_vars = {}        # (task.id, machine) -> OptionalIntervalVar
-        machine_assignments = {}  # (task.id, machine) -> BoolVar
-        machine_to_tasks = {}     # machine -> list[OptionalIntervalVar]
+        start_vars = {}
+        end_vars = {}
+        interval_vars = {}
+        machine_assignments = {}
+        machine_to_tasks = {}
 
-        # Master interval (faz/öncelik bunlar üzerinden)
-        master_start = {}         # task.id -> IntVar
-        master_dur = {}           # task.id -> IntVar
-        master_end = {}           # task.id -> IntVar
-        master_interval = {}      # task.id -> IntervalVar
+        # Her görevin makineden bağımsız süresini tutuyoruz. (Stage 2 için)
+        master_start = {}
+        master_dur = {}
+        master_end = {}
+        master_interval = {}
 
         self.logger.info("Task-Machine correspondence and its duration: ")
         for task in tasks:
             self.logger.info(f"Task: {task.name} ({task.id})")
 
-            # Geçerli makine-süreleri
+            # Her görev için, o görevin atanabileceği makinelerin ve o makinelerdeki geçerli (sıfırdan büyük)
+            # işlem sürelerinin bir haritasını tutuyoruz.
+            # Makineye bağlı süreleri yönetmiş oluyoruz.
             durations_map = {}
             for machine in task.machine_candidates:
                 d = self.config.get_duration(task.base_name, machine)
@@ -57,20 +60,20 @@ class ORToolsSolver:
             if not durations_map:
                 raise ValueError(f"No valid machine durations for task {task.name} ({task.id})")
 
-            # MASTER interval: süre aralıklı
+            # Master'ları yaratalım.
             min_d = min(durations_map.values())
             max_d = max(durations_map.values())
-            ms = model.new_int_var(0, horizon, f"tstart_{task.id}")
-            md = model.new_int_var(min_d, max_d, f"tdur_{task.id}")
-            me = model.new_int_var(0, horizon, f"tend_{task.id}")
-            mi = model.new_interval_var(ms, md, me, f"tiv_{task.id}")
+            ms = model.new_int_var(0, horizon, f"tstart_{task.id}") # ms: mission start
+            md = model.new_int_var(min_d, max_d, f"tdur_{task.id}") # md : mission duration. Makineye göre bir min/max alır.
+            me = model.new_int_var(0, horizon, f"tend_{task.id}") # me: mission end
+            mi = model.new_interval_var(ms, md, me, f"tiv_{task.id}") # mi: ms+md=me kuralını alan interval.
 
             master_start[task.id] = ms
             master_dur[task.id] = md
             master_end[task.id] = me
             master_interval[task.id] = mi
 
-            # Makine alternatifleri: opsiyonel interval + atama bool
+            # Makine alternatifleri
             assign_literals = []
             for machine, duration in durations_map.items():
                 self.logger.debug(f"{machine} : {duration}")
@@ -91,7 +94,7 @@ class ORToolsSolver:
                 # NoOverlap için makineye ata
                 machine_to_tasks.setdefault(machine, []).append(interval)
 
-                # >>> Alternative eşlemesi (reifiye eşitlikler):
+                # Alternative eşlemesi (reifiye eşitlikler):
                 # Seçilen alternatif ise master ile aynı zamanlarda olacak ve master_dur sabit süreye eşitlenecek.
                 model.add(start == ms).only_enforce_if(is_assigned)
                 model.add(end == me).only_enforce_if(is_assigned)

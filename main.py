@@ -13,7 +13,7 @@ from project_config.machine_config_loader import MachineConfig
 from core.fjsm_core import FJSMCore
 from adapters.solver.solver_adapter import ORToolsSolver
 from adapters.driven.gantt_show_adapter import GanttChartRenderer
-from services.database_assembler import MultiSourceConcatenator
+from services.database_assembler import PGMangoAssembler
 
 
 def main():
@@ -21,7 +21,7 @@ def main():
     # Dosya yollarını en başta tanımlıyoruz.
     job_data_path = "json_file.json"
     machine_config_path = "project_config/machine_config.json"
-    gantt_output_path = "gantt_chart.png"
+    gantt_output_path = "gantt_chart.html"
 
     # JSON okuma işini yapacak nesneyi yaratıyoruz. Ona hangi dosyayı okuyacağını söylüyoruz.
     # data_reader = JsonDataReaderAdapter(job_data_path)
@@ -38,8 +38,8 @@ def main():
     pg_adapter = PostgreSQLReaderAdapter()
     mongo_adapter = MongoReaderAdapter()
 
-    # Concat assembler: PG + Mongo → tek liste
-    concat = MultiSourceConcatenator(repos={"pg": pg_adapter, "mongo": mongo_adapter})
+    # Assembler: PG + Mongo tek liste
+    concat = PGMangoAssembler(repos={"pg": pg_adapter, "mongo": mongo_adapter})
     packages = concat.read_all()
 
     # Core nesnesi, FJSM port'unun sözleşmesine uyan bir nesnedir. Dependency injection ile dışarıdan makine listesi ve logger'ı veriyoruz.

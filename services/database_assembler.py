@@ -4,7 +4,7 @@ from typing import Dict, List
 from core.models.data_model import PackageDTO
 from core.ports.package_repo_port import IPackageRepository
 
-class MultiSourceConcatenator:
+class PGMangoAssembler:
     """
     Birden çok repository'den paketleri okur ve TEK LİSTE halinde döner.
     Merge yok; "concat" yaklaşımı.

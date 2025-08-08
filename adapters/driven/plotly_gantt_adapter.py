@@ -40,7 +40,7 @@ def render_interactive_gantt(plan_results: List[PlanResultDTO], output_path: str
 
     fig = go.Figure(data=bars)
     fig.update_layout(
-        title="FJSM Gantt Chart (Interactive)",
+        title="FJSM Gantt Chart",
         barmode='stack',
         xaxis_title="Time",
         yaxis_title="Machine",
