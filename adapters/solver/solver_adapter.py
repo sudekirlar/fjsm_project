@@ -150,7 +150,8 @@ class ORToolsSolver:
                             task_name=task.name,
                             assigned_machine=machine,
                             start_time=start,
-                            end_time=end
+                            end_time=end,
+                            package_uid=task.package_uid,
                         ))
                         self.logger.debug(f"{task.name} ({task.job_id}) : {machine} | {start} : {end}")
                         assignment_counter[machine] += 1

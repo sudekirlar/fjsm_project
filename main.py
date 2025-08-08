@@ -4,7 +4,8 @@ import logging
 
 from adapters.driven.plotly_gantt_adapter import render_interactive_gantt
 from adapters.driving.json_data_reader_adapter import JsonDataReaderAdapter
-from adapters.driving.postgresql_data_reader_adapter import PostgreSQLDataReaderAdapter
+from adapters.driving.postgresql_data_reader_adapter import PostgreSQLReaderAdapter
+from adapters.driving.mongo_data_reader_adapter import MongoReaderAdapter
 from adapters.logging.logger_adapter import LoggerAdapter
 from core.ports.fjsm_port import IFJSMCore
 from core.ports.logging_port import ILoggingPort
@@ -12,6 +13,8 @@ from project_config.machine_config_loader import MachineConfig
 from core.fjsm_core import FJSMCore
 from adapters.solver.solver_adapter import ORToolsSolver
 from adapters.driven.gantt_show_adapter import GanttChartRenderer
+from services.database_assembler import MultiSourceConcatenator
+
 
 def main():
 
@@ -22,16 +25,22 @@ def main():
 
     # JSON okuma işini yapacak nesneyi yaratıyoruz. Ona hangi dosyayı okuyacağını söylüyoruz.
     # data_reader = JsonDataReaderAdapter(job_data_path)
-    reader = PostgreSQLDataReaderAdapter()
     # Sonrasında dosyanın okunmasını ve içindeki veriyi bizim istediğim DTO şekline çevirmesini sağlıyoruz.
     # packages = data_reader.read_packages()
-    packages = reader.read_packages()
 
     # Makine ve süreleri içeren dosyayı okuyacak nesneyi yaratıp dosyasını veriyoruz.
     machine_config = MachineConfig(machine_config_path)
 
     # Loglama nesnemizi yaratıyoruz. level sıralaması: CRITICAL > ERROR > WARNING > INFO > DEBUG > NOTSET. Eğer vermezsek default'ı INFO'dur.
     logger : ILoggingPort = LoggerAdapter(level=logging.DEBUG, file_path="logs/fjsm.log")
+
+    # Repositories
+    pg_adapter = PostgreSQLReaderAdapter()
+    mongo_adapter = MongoReaderAdapter()
+
+    # Concat assembler: PG + Mongo → tek liste
+    concat = MultiSourceConcatenator(repos={"pg": pg_adapter, "mongo": mongo_adapter})
+    packages = concat.read_all()
 
     # Core nesnesi, FJSM port'unun sözleşmesine uyan bir nesnedir. Dependency injection ile dışarıdan makine listesi ve logger'ı veriyoruz.
     core: IFJSMCore = FJSMCore(machine_config, logger=logger)

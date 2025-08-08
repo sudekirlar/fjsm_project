@@ -1,3 +1,5 @@
+# adapters/driven/plotly_gantt_adapter.py
+
 from typing import List
 from core.models.data_model import PlanResultDTO
 import plotly.graph_objects as go
@@ -27,6 +29,7 @@ def render_interactive_gantt(plan_results: List[PlanResultDTO], output_path: str
             name=f"Job {result.job_id}",
             marker=dict(color=job_colors[result.job_id]),
             hovertemplate=(
+                f"Package: {result.package_uid}<br>"
                 f"Task: {result.task_name}<br>"
                 f"Job ID: {result.job_id}<br>"
                 f"Machine: {result.assigned_machine}<br>"

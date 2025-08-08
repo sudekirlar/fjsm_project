@@ -3,12 +3,14 @@
 from typing import List
 import psycopg2
 from psycopg2.extras import RealDictCursor
+
 from core.models.data_model import PackageDTO, JobDTO, TaskDTO
+from core.ports.package_repo_port import IPackageRepository
 from project_config.settings import POSTGRESQL_CONFIG
 
-class PostgreSQLDataReaderAdapter:
+class PostgreSQLReaderAdapter(IPackageRepository):
     def __init__(self):
-        self.conn = psycopg2.connect(
+        self._conn = psycopg2.connect(
             dbname=POSTGRESQL_CONFIG["dbname"],
             user=POSTGRESQL_CONFIG["user"],
             password=POSTGRESQL_CONFIG["password"],
@@ -18,12 +20,11 @@ class PostgreSQLDataReaderAdapter:
 
     def read_packages(self) -> List[PackageDTO]:
         try:
-            with self.conn.cursor(cursor_factory=RealDictCursor) as cur:
+            with self._conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("SELECT * FROM package")
                 package_rows = cur.fetchall()
 
                 packages: List[PackageDTO] = []
-
                 for pkg in package_rows:
                     package_id = pkg["package_id"]
                     deadline = pkg["deadline"]
@@ -40,37 +41,35 @@ class PostgreSQLDataReaderAdapter:
                         tasks: List[TaskDTO] = []
 
                         for task in task_rows:
-                            raw_machines = task["eligible_machines"]  # TEXT column
-                            if raw_machines:
-                                machine_codes = raw_machines.strip("[]").replace("'", "").replace('"', '').split(", ")
-                            else:
-                                machine_codes = []
-
-                            task_dto = TaskDTO(
+                            raw = task["eligible_machines"]
+                            machines = raw.strip("[]").replace("'", "").replace('"', '').split(", ") if raw else []
+                            tasks.append(TaskDTO(
                                 name=task["name"],
                                 type=task["type"],
                                 order=task["order_id"],
                                 count=task["count"],
-                                eligible_machines=machine_codes
-                            )
-                            tasks.append(task_dto)
+                                eligible_machines=machines
+                            ))
 
                         jobs.append(JobDTO(job_id=job_id, tasks=tasks))
 
                     packages.append(PackageDTO(
                         package_id=package_id,
-                        deadline=deadline,
-                        jobs=jobs
+                        deadline=str(deadline),
+                        jobs=jobs,
+                        source="PG",
+                        uid=f"PG-{package_id}"
                     ))
-
                 return packages
-        except Exception as e:
-            self.conn.rollback()
-            raise e
+        except Exception:
+            self._conn.rollback()
+            raise
 
     def close(self):
-        self.conn.close()
+        try:
+            self._conn.close()
+        except:
+            pass
 
     def __del__(self):
         self.close()
-

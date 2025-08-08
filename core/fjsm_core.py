@@ -35,6 +35,7 @@ class FJSMCore(IFJSMCore):
                             task=task,
                             job_id=job.job_id,
                             package_id=package.package_id,
+                            package_uid=package.uid,
                             suffix=None,
                             override_machines=valid_machines
                         )
@@ -52,6 +53,7 @@ class FJSMCore(IFJSMCore):
                                 task=task,
                                 job_id=job.job_id,
                                 package_id=package.package_id,
+                                package_uid=package.uid,
                                 suffix=f"_{i}",
                                 override_machines=valid_machines
                             )
@@ -75,6 +77,7 @@ class FJSMCore(IFJSMCore):
         task: TaskDTO,
         job_id: int,
         package_id: int,
+        package_uid: str | None,
         suffix: str | None,
         override_machines: List[str] | None = None
     ) -> TaskInstanceDTO:
@@ -93,6 +96,7 @@ class FJSMCore(IFJSMCore):
             id=instance_id,
             job_id=job_id,
             package_id=package_id,
+            package_uid=package_uid,
             order=task.order,
             name=instance_name,
             base_name=base_name,
