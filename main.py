@@ -1,7 +1,9 @@
 # main.py
 
 import logging
+import uuid
 
+from adapters.driven.plan_result_writer_adapter import PostgreSQLPlanResultWriter
 from adapters.driven.plotly_gantt_adapter import render_interactive_gantt
 from adapters.driving.json_data_reader_adapter import JsonDataReaderAdapter
 from adapters.driving.postgresql_data_reader_adapter import PostgreSQLReaderAdapter
@@ -51,6 +53,19 @@ def main():
     solver = ORToolsSolver(machine_config, logger=logger)
     # Core'dan gelen task listesini solver'a veriyoruz ve sonucu atıyoruz.
     plan_results = solver.solve(task_instances)
+    run_id = uuid.uuid4()
+    # Solver status bilgisini şu aşamada bilmiyoruz; istersen "OPTIMAL"/"FEASIBLE" gibi bir string geçebilirsin.
+    writer = PostgreSQLPlanResultWriter()
+    inserted = writer.insert_run_and_results(
+        run_id=run_id,
+        results=plan_results,
+        status_init="RUNNING",
+        solver_status_init="N/A",
+        status_final="COMPLETED",
+        solver_status_final="N/A",  # solver’dan string almak istersen burayı doldur
+        error_message=None
+    )
+    logger.info(f"Plan results inserted: {inserted} rows (run_id={run_id})")
 
     # Gantt grafiğinin çıkacağı nesneyi ve adapter'a gidecek yolu veriyoruz.
     # gantt = GanttChartRenderer(output_path=gantt_output_path, logger = logger)
