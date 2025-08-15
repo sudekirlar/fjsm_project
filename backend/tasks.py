@@ -1,6 +1,4 @@
-# backend/tasks.py
 import logging
-# Göreceli import yaparak celery'nin app'inin nerede olduğunu söylüyoruz.
 from .celery_app import app
 from adapters.driven.plan_result_writer_adapter import PostgreSQLPlanResultWriter
 from adapters.driving.postgresql_data_reader_adapter import PostgreSQLReaderAdapter
@@ -11,10 +9,8 @@ from core.fjsm_core import FJSMCore
 from adapters.solver.solver_adapter import ORToolsSolver
 from services.database_assembler import PGMangoAssembler
 
-
 @app.task(name='backend.tasks.execute_planning_task', bind=True)
-def execute_planning_task(self, run_id: str):
-    # main'deki wiring'i aldım.
+def execute_planning_task(self, run_id: str, locks: list | None = None):
     logger = LoggerAdapter(level=logging.DEBUG)
     result_writer = PostgreSQLPlanResultWriter()
 
@@ -34,17 +30,12 @@ def execute_planning_task(self, run_id: str):
 
         solver = ORToolsSolver(machine_config, logger=logger)
 
-
-        plan_results = solver.solve(task_instances)
-
+        plan_results = solver.solve(task_instances, locks=locks or [])
 
         result_writer.write_results(run_id, plan_results)
 
-
         makespan = max(r.end_time for r in plan_results) if plan_results else 0
-
-        # Solver Status'u çekeceğiz sonra.
-        result_writer.update_run_status(run_id, 'COMPLETED', makespan=makespan, solver_status="OPTIMAL_OR_FEASIBLE")
+        result_writer.update_run_status(run_id, 'COMPLETED', makespan=makespan, solver_status="OPTIMAL")
 
         logger.info(f"Task completed successfully for run_id: {run_id}")
         return {'status': 'COMPLETED', 'makespan': makespan}
