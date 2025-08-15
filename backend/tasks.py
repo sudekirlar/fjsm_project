@@ -1,40 +1,52 @@
+# backend/tasks.py
 import logging
 from .celery_app import app
 from adapters.driven.plan_result_writer_adapter import PostgreSQLPlanResultWriter
+from adapters.driven.mongo_plan_result_writer_adapter import MongoPlanResultWriter
 from adapters.driving.postgresql_data_reader_adapter import PostgreSQLReaderAdapter
 from adapters.driving.mongo_data_reader_adapter import MongoReaderAdapter
 from adapters.logging.logger_adapter import LoggerAdapter
 from project_config.machine_config_loader import MachineConfig
 from core.fjsm_core import FJSMCore
 from adapters.solver.solver_adapter import ORToolsSolver
-from services.database_assembler import PGMangoAssembler
+
+def _get_io(db: str):
+    db = (db or "PG").upper()
+    if db == "MONGO":
+        return MongoReaderAdapter(), MongoPlanResultWriter()
+    return PostgreSQLReaderAdapter(), PostgreSQLPlanResultWriter()
 
 @app.task(name='backend.tasks.execute_planning_task', bind=True)
-def execute_planning_task(self, run_id: str, locks: list | None = None):
+def execute_planning_task(self, *args, **kwargs):
+    """
+    Geri uyumluluk için imza esnek: run_id pozisyonel/anahtar olabilir,
+    db ve locks kwargs’dan gelir.
+    """
+    # ---- Param çözümleme (geri uyumluluk) ----
+    run_id = kwargs.pop("run_id", None) or (args[0] if args else None)
+    db     = (kwargs.pop("db", None) or "PG").upper()
+    locks  = kwargs.pop("locks", None) or (args[1] if len(args) > 1 else None)
+    if run_id is None:
+        raise ValueError("run_id is required")
+
     logger = LoggerAdapter(level=logging.DEBUG)
-    result_writer = PostgreSQLPlanResultWriter()
+    reader, result_writer = _get_io(db)
 
-    logger.info(f"Task started for run_id: {run_id}")
-
+    logger.info(f"Task started for run_id: {run_id} (DB={db})")
     try:
         result_writer.update_run_status(run_id, 'RUNNING')
 
         machine_config = MachineConfig("project_config/machine_config.json")
-        pg_adapter = PostgreSQLReaderAdapter()
-        mongo_adapter = MongoReaderAdapter()
-        assembler = PGMangoAssembler(repos={"pg": pg_adapter, "mongo": mongo_adapter})
-        packages = assembler.read_all()
+        packages = reader.read_packages()
 
         core = FJSMCore(machine_config, logger=logger)
         task_instances = core.process_packages(packages)
 
         solver = ORToolsSolver(machine_config, logger=logger)
-
         plan_results = solver.solve(task_instances, locks=locks or [])
 
         result_writer.write_results(run_id, plan_results)
-
-        makespan = max(r.end_time for r in plan_results) if plan_results else 0
+        makespan = max((r.end_time for r in plan_results), default=0)
         result_writer.update_run_status(run_id, 'COMPLETED', makespan=makespan, solver_status="OPTIMAL")
 
         logger.info(f"Task completed successfully for run_id: {run_id}")
