@@ -1,4 +1,4 @@
-# my_tests/fjsm_problem_first_try.py
+# tests/fjsm_problem_first_try.py
 import collections
 from ortools.sat.python import cp_model
 
