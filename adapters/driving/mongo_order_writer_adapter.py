@@ -1,12 +1,10 @@
+# adapters/driving/mongo_order_writer_adapter.py
+
 from typing import Optional, List
 from pymongo import MongoClient, ASCENDING
-from project_config.settings import MONGODB_CONFIG
+from config.settings import MONGODB_CONFIG
 
 class MongoOrderWriterAdapter:
-    """
-    packages koleksiyonunda şu yapıyı varsayar:
-    { package_id, deadline, jobs: [ { job_id, tasks: [ {task_id, name, type, order_id, count, eligible_machines[]} ] } ] }
-    """
     def __init__(self):
         self._client = MongoClient(MONGODB_CONFIG["uri"])
         self._db = self._client[MONGODB_CONFIG["db_name"]]
@@ -21,9 +19,9 @@ class MongoOrderWriterAdapter:
         self,
         package_id: int,
         job_id: int,
-        job_type: str,    # kesme|oyma|bükme|yanak_açma
-        mode: str,        # single|split
-        phase: int,       # order_id
+        job_type: str,
+        mode: str,
+        phase: int,
         count: Optional[int],
         eligible_machines: Optional[List[str]],
         deadline,
@@ -38,7 +36,6 @@ class MongoOrderWriterAdapter:
             job = {"job_id": int(job_id), "tasks": []}
             jobs.append(job)
 
-        # basit task_id üretimi (paket içi benzersiz)
         new_tid = 1
         for j in jobs:
             for t in j.get("tasks", []):

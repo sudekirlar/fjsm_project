@@ -27,7 +27,7 @@ Thumbs.db
 /logs
 *.log
 
-project_config/settings.py
+config/settings.py
 
 .html
 

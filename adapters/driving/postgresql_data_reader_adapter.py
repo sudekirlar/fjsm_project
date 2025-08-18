@@ -3,10 +3,9 @@
 from typing import List
 import psycopg2
 from psycopg2.extras import RealDictCursor
-
 from core.models.data_model import PackageDTO, JobDTO, TaskDTO
 from core.ports.package_repo_port import IPackageRepository
-from project_config.settings import POSTGRESQL_CONFIG
+from config.settings import POSTGRESQL_CONFIG
 
 class PostgreSQLReaderAdapter(IPackageRepository):
     def __init__(self):

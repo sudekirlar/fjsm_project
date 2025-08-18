@@ -3,7 +3,7 @@
 from typing import List
 from core.models.data_model import JobDTO, TaskDTO, TaskInstanceDTO, PackageDTO
 from core.ports.logging_port import ILoggingPort
-from project_config.machine_config_loader import MachineConfig
+from config.machine_config_loader import MachineConfig
 from core.ports.fjsm_port import IFJSMCore
 
 class FJSMCore(IFJSMCore):

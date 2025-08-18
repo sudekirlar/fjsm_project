@@ -1,25 +1,21 @@
 # backend/app.py
+
 import uuid
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 import psycopg2
 from psycopg2.extras import RealDictCursor
-
-from .celery_app import app as celery_app
 from .tasks import execute_planning_task
-from project_config.settings import POSTGRESQL_CONFIG
-from adapters.driving.postgresql_order_writer_adapter import PostgreSQLOrderWriterAdapter
-import uuid
+from config.settings import POSTGRESQL_CONFIG
 from pymongo import MongoClient
 from backend.database_select import resolve_db_from_request
 from adapters.driven.plan_result_writer_adapter import PostgreSQLPlanResultWriter
 from adapters.driven.mongo_plan_result_writer_adapter import MongoPlanResultWriter
 from adapters.driving.postgresql_order_writer_adapter import PostgreSQLOrderWriterAdapter
 from adapters.driving.mongo_order_writer_adapter import MongoOrderWriterAdapter
-from project_config.settings import MONGODB_CONFIG
+from config.settings import MONGODB_CONFIG
 
 ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "*"]
-
 app = Flask(__name__)
 app.url_map.strict_slashes = False
 
@@ -54,15 +50,12 @@ def _plan_writer_for(db: str):
 def _order_writer_for(db: str):
     return MongoOrderWriterAdapter() if db == "MONGO" else PostgreSQLOrderWriterAdapter()
 
-
-# ---------------------------- Solver ----------------------------
 @app.route('/api/solver/start', methods=['POST'])
 def start_solver_endpoint():
     db = resolve_db_from_request(request)
     run_id = uuid.uuid4()
     _plan_writer_for(db).create_run_record(run_id)  # PENDING
 
-    # Celery'ye DB tipini de gönder
     execute_planning_task.delay(run_id=str(run_id), db=db)
     return jsonify({"run_id": str(run_id), "db": db})
 
@@ -102,7 +95,6 @@ def get_solver_status_endpoint(run_id):
             "error": row.get("error_message")
         })
     else:
-        # mevcut PG kodun (senin hali zaten vardı)
         conn = get_db_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -124,7 +116,6 @@ def get_solver_status_endpoint(run_id):
 
 @app.route('/api/plans/<run_id>', methods=['GET'])
 def get_plan_info(run_id):
-    # opsiyonel bilgi ucu (gerekirse)
     return jsonify({"run_id": run_id})
 @app.route('/api/plans/recent', methods=['GET'])
 def get_recent_plans():
@@ -137,7 +128,6 @@ def get_recent_plans():
                 for i, r in enumerate(rows)]
         return jsonify(data)
     else:
-        # PG versiyonun (senin halin)
         conn = get_db_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -169,7 +159,6 @@ def get_plan_gantt_endpoint(run_id):
         } for r in rows]
         return jsonify(gantt_data)
     else:
-        # PG versiyonun (mevcut)
         conn = get_db_connection()
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
@@ -192,8 +181,6 @@ def get_plan_gantt_endpoint(run_id):
         } for r in rows]
         return jsonify(gantt_data)
 
-
-# ---------------------------- Orders ----------------------------
 @app.route('/api/orders', methods=['POST'])
 def create_order_endpoint():
     db = resolve_db_from_request(request)  # 👈 seçime göre yaz
@@ -220,7 +207,7 @@ def create_order_endpoint():
         if not isinstance(em, list) or any(not isinstance(x, str) for x in em):
             return jsonify({"error": "eligible_machines listesi hatalı."}), 400
 
-        writer = _order_writer_for(db)  # 👈 router
+        writer = _order_writer_for(db)
         try:
             task_id = writer.create_task(
                 package_id=package_id,

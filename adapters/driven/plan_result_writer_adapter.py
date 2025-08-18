@@ -1,25 +1,23 @@
 # adapters/driven/plan_result_writer_adapter.py
+
 from typing import List, Optional
 import uuid
 import psycopg2
 from psycopg2.extras import execute_values, register_uuid
-from project_config.settings import POSTGRESQL_CONFIG
+from config.settings import POSTGRESQL_CONFIG
 from core.models.data_model import PlanResultDTO
 
 
 class PostgreSQLPlanResultWriter:
     def __init__(self) -> None:
-        # Not: Her fonksiyon kendi bağlantısını yönetecek ki Celery process'leri arasında sorun olmasın.
         pass
 
     def _get_connection(self):
         conn = psycopg2.connect(**POSTGRESQL_CONFIG)
-        # UUID tipini kaydediyoruz.
         register_uuid(conn_or_curs=conn)
         return conn
 
     def create_run_record(self, run_id: uuid.UUID) -> None:
-        # plan_metadata tablosuna PENDING bilgisini gönderiyoruz.
         sql = "INSERT INTO plan_metadata (run_id, status) VALUES (%s, 'PENDING')"
         conn = self._get_connection()
         try:

@@ -1,4 +1,5 @@
 # backend/tasks.py
+
 import logging
 from .celery_app import app
 from adapters.driven.plan_result_writer_adapter import PostgreSQLPlanResultWriter
@@ -6,7 +7,7 @@ from adapters.driven.mongo_plan_result_writer_adapter import MongoPlanResultWrit
 from adapters.driving.postgresql_data_reader_adapter import PostgreSQLReaderAdapter
 from adapters.driving.mongo_data_reader_adapter import MongoReaderAdapter
 from adapters.logging.logger_adapter import LoggerAdapter
-from project_config.machine_config_loader import MachineConfig
+from config.machine_config_loader import MachineConfig
 from core.fjsm_core import FJSMCore
 from adapters.solver.solver_adapter import ORToolsSolver
 
@@ -18,11 +19,6 @@ def _get_io(db: str):
 
 @app.task(name='backend.tasks.execute_planning_task', bind=True)
 def execute_planning_task(self, *args, **kwargs):
-    """
-    Geri uyumluluk için imza esnek: run_id pozisyonel/anahtar olabilir,
-    db ve locks kwargs’dan gelir.
-    """
-    # ---- Param çözümleme (geri uyumluluk) ----
     run_id = kwargs.pop("run_id", None) or (args[0] if args else None)
     db     = (kwargs.pop("db", None) or "PG").upper()
     locks  = kwargs.pop("locks", None) or (args[1] if len(args) > 1 else None)
@@ -36,7 +32,7 @@ def execute_planning_task(self, *args, **kwargs):
     try:
         result_writer.update_run_status(run_id, 'RUNNING')
 
-        machine_config = MachineConfig("project_config/machine_config.json")
+        machine_config = MachineConfig("config/machine_config.json")
         packages = reader.read_packages()
 
         core = FJSMCore(machine_config, logger=logger)

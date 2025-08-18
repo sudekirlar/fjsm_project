@@ -4,17 +4,9 @@ from typing import Optional, List
 import json
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from project_config.settings import POSTGRESQL_CONFIG
+from config.settings import POSTGRESQL_CONFIG
 
 class PostgreSQLOrderWriterAdapter:
-    """
-    Web'den gelen tekil 'iş emri' kaydını veritabanına yazar.
-    Varsayımlar (mevcut reader şemasını bozmamak için):
-      - package(package_id, deadline)
-      - job(job_id [şimdilik global unique], package_id)
-      - task(task_id, job_id, name, type, order_id, count, eligible_machines)
-    Not: Orta vadede job_id'yi package_id ile lokal yapmak için migration planlanacak.
-    """
     def __init__(self):
         self._conn = psycopg2.connect(**POSTGRESQL_CONFIG)
 
@@ -28,10 +20,6 @@ class PostgreSQLOrderWriterAdapter:
         self.close()
 
     def _ensure_package(self, cur, package_id: int, deadline):
-        """
-        Deadline'ı şimdilik gelen 10000/… değerine set ediyoruz.
-        package yoksa insert; varsa update (gerekirse).
-        """
         cur.execute("SELECT 1 FROM package WHERE package_id = %s", (package_id,))
         if cur.fetchone() is None:
             cur.execute(
@@ -39,17 +27,12 @@ class PostgreSQLOrderWriterAdapter:
                 (package_id, str(deadline))  # tip uyumu için str'e çeviriyoruz
             )
         else:
-            # İstersen yalnızca NULL ise güncelle; şimdilik override et
             cur.execute(
                 "UPDATE package SET deadline = %s WHERE package_id = %s",
                 (str(deadline), package_id)
             )
 
     def _ensure_job(self, cur, package_id: int, job_id: int):
-        """
-        Şu an şema 'job_id'yi global unique kabul ediyor olabilir.
-        Yine de package_id'yi stabilize ediyoruz.
-        """
         cur.execute("SELECT 1 FROM job WHERE job_id = %s", (job_id,))
         exists = cur.fetchone() is not None
         if not exists:
@@ -58,7 +41,6 @@ class PostgreSQLOrderWriterAdapter:
                 (job_id, package_id)
             )
         else:
-            # package_id'yi senkron tut
             cur.execute(
                 "UPDATE job SET package_id = %s WHERE job_id = %s AND (package_id IS DISTINCT FROM %s)",
                 (package_id, job_id, package_id)
@@ -68,17 +50,13 @@ class PostgreSQLOrderWriterAdapter:
         self,
         package_id: int,
         job_id: int,
-        job_type: str,            # 'kesme' | 'oyma' | 'bükme' | 'yanak_açma'
-        mode: str,                # 'single' | 'split'
-        phase: int,               # order_id
+        job_type: str,
+        mode: str,
+        phase: int,
         count: Optional[int],
         eligible_machines: Optional[List[str]],
         deadline,
     ) -> int:
-        """
-        Döndürdüğü değer: eklenen task.task_id (SERIAL/IDENTITY varsayımı).
-        eligible_machines alanını JSON string olarak yazar.
-        """
         try:
             with self._conn:
                 with self._conn.cursor(cursor_factory=RealDictCursor) as cur:

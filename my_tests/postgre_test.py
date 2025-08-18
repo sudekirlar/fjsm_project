@@ -7,7 +7,7 @@ def test_postgres_connection():
             port=5432,
             database="fjsm_database",
             user="postgres",
-            password="su0180"
+            password="your_database_password"
         )
         print("Bağlantı başarılı!")
         connection.close()

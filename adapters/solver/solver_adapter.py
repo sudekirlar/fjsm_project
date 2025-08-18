@@ -1,8 +1,10 @@
+# adapters/solver/solver_adapter
+
 import os
 from ortools.sat.python import cp_model
 from core.models.data_model import TaskInstanceDTO, PlanResultDTO
 from core.ports.logging_port import ILoggingPort
-from project_config.machine_config_loader import MachineConfig
+from config.machine_config_loader import MachineConfig
 from collections import defaultdict, Counter
 
 class ORToolsSolver:
@@ -14,7 +16,6 @@ class ORToolsSolver:
         locks = locks or []
         model = cp_model.CpModel()
 
-        # Horizon
         max_duration_sum = 0
         for task in tasks:
             durations = [
@@ -26,7 +27,6 @@ class ORToolsSolver:
                 max_duration_sum += max(durations)
         horizon = int(max_duration_sum * 1.5)
 
-        # Vars
         start_vars = {}
         end_vars = {}
         interval_vars = {}
@@ -37,7 +37,6 @@ class ORToolsSolver:
         master_end = {}
         master_interval = {}
 
-        # Build per-task alternatives
         self.logger.info("Task-Machine correspondence and its duration:")
         for task in tasks:
             self.logger.info(f"Task: {task.name} ({task.id})")
@@ -84,19 +83,16 @@ class ORToolsSolver:
                 model.add(end   == me).only_enforce_if(is_assigned)
                 model.add(md    == duration).only_enforce_if(is_assigned)
 
-            # exactly one alternative
             model.add_exactly_one(assign_literals)
 
         # NoOverlap per machine
         for machine, intervals in machine_to_tasks.items():
             model.add_no_overlap(intervals)
 
-        # Job–Order grouping
         job_order_map = defaultdict(lambda: defaultdict(list))
         for task in tasks:
             job_order_map[task.job_id][task.order].append(task)
 
-        # Phase precedence
         for job_id, order_map in job_order_map.items():
             orders = sorted(order_map.keys())
             for i in range(len(orders) - 1):
@@ -110,7 +106,6 @@ class ORToolsSolver:
                 model.add_min_equality(phase_start, next_starts)
                 model.add(phase_end <= phase_start)
 
-        # Job finals
         job_final_ends = []
         for job_id, order_map in job_order_map.items():
             if not order_map: continue
@@ -121,17 +116,12 @@ class ORToolsSolver:
             model.add_max_equality(job_end_var, ends)
             job_final_ends.append(job_end_var)
 
-        # Objectives
         makespan = model.new_int_var(0, horizon, "makespan")
         model.add_max_equality(makespan, job_final_ends)
         total_job_completion = model.new_int_var(0, horizon * max(1, len(job_final_ends)), "total_job_completion")
         model.add(total_job_completion == sum(job_final_ends))
 
-        # ---------- 🔒 LOCKS: makine ve başlangıç sabitleme ----------
-        # locks: [{ task_instance_id, machine, start_min }]
-        # task.id == task_instance_id eşlemesi varsayımı
         if locks:
-            # hızlı arama için set
             lock_by_tid = { int(l["task_instance_id"]): l for l in locks if "task_instance_id" in l }
             for t in tasks:
                 if t.id in lock_by_tid:
@@ -140,7 +130,6 @@ class ORToolsSolver:
                     s  = int(lk["start_min"])
                     if (t.id, m) not in machine_assignments:
                         raise ValueError(f"Lock refers to invalid machine '{m}' for task {t.id}")
-                    # seçilen makine true, diğerleri false
                     for mc in t.machine_candidates:
                         if (t.id, mc) not in machine_assignments:
                             continue
@@ -149,10 +138,8 @@ class ORToolsSolver:
                             model.add(lit == 1)
                         else:
                             model.add(lit == 0)
-                    # başlangıcı sabitle
                     model.add(master_start[t.id] == s)
 
-        # ---------- LEXICOGRAPHIC 2-AŞAMA ----------
         self.logger.info("Solver starting... (Stage 1: minimize makespan)")
         solver = cp_model.CpSolver()
         solver.parameters.max_time_in_seconds = 60.0

@@ -1,8 +1,10 @@
+
+
 from typing import List, Optional
 from datetime import datetime, timezone
 import uuid
 from pymongo import MongoClient, ASCENDING, DESCENDING
-from project_config.settings import MONGODB_CONFIG
+from config.settings import MONGODB_CONFIG
 from core.models.data_model import PlanResultDTO
 
 class MongoPlanResultWriter:
