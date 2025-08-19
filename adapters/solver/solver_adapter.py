@@ -143,8 +143,8 @@ class ORToolsSolver:
         self.logger.info("Solver starting... (Stage 1: minimize makespan)")
         solver = cp_model.CpSolver()
         solver.parameters.max_time_in_seconds = 60.0
-        solver.parameters.log_search_progress = True
-        solver.parameters.log_to_stdout = True
+        solver.parameters.log_search_progress = False
+        solver.parameters.log_to_stdout = False
         # solver.parameters.num_search_workers = os.cpu_count() or 4
 
         model.minimize(makespan)
