@@ -17,14 +17,17 @@ def _get_io(db: str):
         return MongoReaderAdapter(), MongoPlanResultWriter()
     return PostgreSQLReaderAdapter(), PostgreSQLPlanResultWriter()
 
+# Burada name genel ad, terminalde bu yazacak. bind da Celery'e fonksiyonu çağırırken ilk argüman self al diyoruz.
 @app.task(name='backend.tasks.execute_planning_task', bind=True)
-def execute_planning_task(self, *args, **kwargs):
+def execute_planning_task(self, *args, **kwargs): # args argümanları tuple toplar, kwargs anahtar kelimeleri tuple toplar.
+    # run_id'yi arıyoruz nerede? Pop ile de siliyoruz.
     run_id = kwargs.pop("run_id", None) or (args[0] if args else None)
     db     = (kwargs.pop("db", None) or "PG").upper()
     locks  = kwargs.pop("locks", None) or (args[1] if len(args) > 1 else None)
     if run_id is None:
         raise ValueError("run_id is required")
 
+    # Daha öncesinde main'de olan wiring'lerimiz.
     logger = LoggerAdapter(level=logging.DEBUG)
     reader, result_writer = _get_io(db)
 

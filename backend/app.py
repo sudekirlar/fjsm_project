@@ -15,11 +15,11 @@ from adapters.driving.postgresql_order_writer_adapter import PostgreSQLOrderWrit
 from adapters.driving.mongo_order_writer_adapter import MongoOrderWriterAdapter
 from config.settings import MONGODB_CONFIG
 
-ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "*"]
+ALLOWED_ORIGINS = ["http://localhost:5173", "http://127.0.0.1:5173", "*"] # Hangi frontend'lere bu backend istek atabilir?
 app = Flask(__name__)
-app.url_map.strict_slashes = False
+app.url_map.strict_slashes = False # /api/plans ile /api/plans/ aynı yere gitsin.
 
-CORS(
+CORS( # Sadece /api/ ve altındaki yollar için izin verilen originler'le çalışacak şekilde ayarlayalım.
     app,
     resources={r"/api/*": {"origins": ALLOWED_ORIGINS}},
     supports_credentials=False,
@@ -30,8 +30,8 @@ def get_db_connection():
     psycopg2.extras.register_uuid(conn_or_curs=conn)
     return conn
 
-@app.after_request
-def add_cors_headers(resp):
+@app.after_request # Flask'e her bir istek bittikten ve bir cevap oluşturulduktan hemen sonra bu fonksiyonu çalıştır diyoruz. Baya hata almıştım öyle eklendi burası.
+def add_cors_headers(resp): # # Her cevaba CORS'u ekler.
     origin = request.headers.get("Origin", "*")
     resp.headers["Access-Control-Allow-Origin"] = origin if origin in ALLOWED_ORIGINS or "*" in ALLOWED_ORIGINS else "null"
     resp.headers["Vary"] = "Origin"
@@ -41,7 +41,7 @@ def add_cors_headers(resp):
     return resp
 
 @app.route("/api/<path:_any>", methods=["OPTIONS"])
-def cors_preflight(_any):
+def cors_preflight(_any): # Preflight isteğidir. Tarayıcı asıl POST/PUT gibi istekleri göndermeden önce OPTIONS metoduyla sunucuya bu isteği yapıp yapamayacağını sorar. Bu endpoint, "evet yapabilirsin" anlamına gelen boş bir 204 cevabı döner. Yine hata aldığım için koymuştum.
     return ("", 204)
 
 def _plan_writer_for(db: str):
@@ -54,10 +54,11 @@ def _order_writer_for(db: str):
 def start_solver_endpoint():
     db = resolve_db_from_request(request)
     run_id = uuid.uuid4()
-    _plan_writer_for(db).create_run_record(run_id)  # PENDING
+    _plan_writer_for(db).create_run_record(run_id)  # PENDING diyoruz anında.
 
+    # Ağır olan asıl işi Celery Worker'a paslıyoruz run_id ve db bilgisiyle. delay komutu bu satırın anında bitmesini sağlar.
     execute_planning_task.delay(run_id=str(run_id), db=db)
-    return jsonify({"run_id": str(run_id), "db": db})
+    return jsonify({"run_id": str(run_id), "db": db}) # Kullanıcıya işlem başladı diyoruz.
 
 
 @app.route('/api/solver/start_with_locks', methods=['POST'])
@@ -183,7 +184,7 @@ def get_plan_gantt_endpoint(run_id):
 
 @app.route('/api/orders', methods=['POST'])
 def create_order_endpoint():
-    db = resolve_db_from_request(request)  # 👈 seçime göre yaz
+    db = resolve_db_from_request(request)
     data = request.get_json(force=True, silent=True) or {}
     try:
         package_id = int(data.get("package_id"))
